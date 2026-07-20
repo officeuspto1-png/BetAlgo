@@ -589,4 +589,34 @@ def main():
         application = Application.builder().token(token).build()
         
         # Command handlers
-        application.add
+        application.add_handler(CommandHandler("start", start_command))
+        application.add_handler(CommandHandler("balance", balance_command))
+        application.add_handler(CommandHandler("stats", stats_command))
+        application.add_handler(CommandHandler("verify", verify_command))
+        application.add_handler(CommandHandler("cancel", cancel_command))
+        
+        # Conversation handler for games
+        conv_handler = ConversationHandler(
+            entry_points=[CallbackQueryHandler(game_callback, pattern="^game_")],
+            states={
+                BET_AMOUNT: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_bet_amount)],
+                GAME_CHOICE: [CallbackQueryHandler(handle_game_choice), 
+                             MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text_choice)]
+            },
+            fallbacks=[CommandHandler("cancel", cancel_command)]
+        )
+        application.add_handler(conv_handler)
+        
+        # Callback handlers
+        application.add_handler(CallbackQueryHandler(game_callback, pattern="^(?!game_).*$"))
+        application.add_handler(CallbackQueryHandler(menu_callback, pattern="^menu$"))
+        
+        logger.info("✅ BetAlgo is running!")
+        application.run_polling(allowed_updates=Update.ALL_TYPES)
+        
+    except Exception as e:
+        logger.error(f"❌ Fatal error: {e}")
+        sys.exit(1)
+
+if __name__ == '__main__':
+    main()
